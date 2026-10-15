@@ -1,0 +1,69 @@
+{
+  "comparison_scope": "aggregate-rule-scope",
+  "findings": [
+    {
+      "count": 1,
+      "rule_id": "content_type.nosniff_missing",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "cookie.httponly_missing",
+      "scope": "response",
+      "severity": "info"
+    },
+    {
+      "count": 1,
+      "rule_id": "cookie.samesite_none_insecure",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "cookie.secure_missing",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "csp.broad_scripts",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "csp.eval",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "csp.inline_scripts",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "framing.wildcard",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "hsts.missing",
+      "scope": "response",
+      "severity": "warning"
+    },
+    {
+      "count": 1,
+      "rule_id": "referrer.permissive",
+      "scope": "response",
+      "severity": "warning"
+    }
+  ],
+  "label": "synthetic-example",
+  "schema_version": 1,
+  "tool": "vallum-http",
+  "tool_version": "0.2.0"
+}

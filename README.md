@@ -128,9 +128,51 @@ python3 -m vallum_http \
 
 `--fail-on` accepts `info`, `warning` (default), `high`, or `none`. Changing the threshold changes the exit code, not the findings. Network and file errors return a JSON error object when `--format json` is selected. Argument syntax errors use the command parser's standard error output.
 
-Successful JSON contains `schema_version`, `mode`, `target`, `status`, `redirects`, `summary`, and `findings`. Each finding has `id`, `severity`, `message`, and `recommendation`. IDs are intended for automation; message wording can improve between releases. Findings are sorted by severity, ID, then message. The schema is versioned; finding IDs are stable within the 0.1 release line.
+Successful JSON contains `schema_version`, `mode`, `target`, `status`, `redirects`, `summary`, and `findings`. Each finding has `id`, `severity`, `message`, and `recommendation`. IDs are intended for automation; message wording can improve between releases. Findings are sorted by severity, ID, then message. The schema is versioned; finding IDs are stable within the 0.2 release line.
 
 Cookie names and values, raw headers, URL queries, and fragments are omitted from successful reports. Hostnames and paths remain, and paths can contain secrets. Review reports before sharing them. Runtime URL, encoding, filesystem, and transport errors use messages that omit raw exception details. Argument syntax errors use the standard argument parser and may repeat supplied arguments.
+
+
+## New in 0.2: policy finding snapshots and SARIF
+
+Capture a reviewed baseline and gate later changes:
+
+```sh
+python3 -m vallum_http --headers examples/needs-review.headers \
+  --origin https://demo.invalid/ --write-baseline baseline.json \
+  --baseline-label public-document --fail-on none
+python3 -m vallum_http --headers examples/needs-review.headers \
+  --origin https://demo.invalid/ --baseline baseline.json \
+  --baseline-label public-document --fail-on-new --format json
+```
+
+Unchanged findings exit `0` in the second command. `--fail-on-new` fails only for added findings or severity increases meeting the selected `--fail-on` threshold. Resolutions and severity decreases do not fail it; `--fail-on none` disables finding failures. Without the new flag, the original full-report threshold is unchanged. Invalid baselines and other input errors exit `2`. Baseline writes require a new destination and never overwrite existing files. The tool validates a supplied baseline before making an online request.
+
+This is a **difference between observed policy findings**, not proof that a vulnerability appeared or was fixed. Snapshots intentionally contain no raw headers, cookie names or values, URLs, queries, hostname/path data, or secret hashes. Counts are aggregated by rule and severity across the response. Cookie order changes do not create false identity matches. Moving a missing attribute between two cookies while preserving counts is invisible; changing a policy to another value that yields the same findings is also invisible. Use direct header review when exact policy differences matter.
+
+Provide the same public `--baseline-label` for the same endpoint, request method, authentication context, document classification and capture procedure. Labels are opaque letters/digits/hyphens/underscores, not URLs. They do not verify endpoint identity or comparable collection conditions. Do not compare different endpoints or HEAD/GET observations under one label. This deliberate privacy tradeoff avoids storing target identifiers. Baseline changes should be reviewed, not accepted automatically.
+
+Successful JSON keeps `schema_version: 1` and its original fields. With `--baseline`, the added `comparison` object has `scope: "aggregate-rule-scope"`; `added`, `resolved`, `unchanged`, and `severity_changed` arrays; and summary observation counts. Entries use `rule_id`, `scope: "response"`, `severity`, `count`. Severity shifts use `from` and `to` instead of `severity`. Equal severity counts are cancelled first, then remaining counts are paired in ascending severity order. These are aggregate shifts, not proof that the same cookie changed severity.
+
+A ready-made synthetic snapshot is included at `examples/review.baseline.json`, labeled `synthetic-example`.
+
+The separate baseline schema contains exactly `schema_version: 1`, `tool: "vallum-http"`, `tool_version`, `label`, `comparison_scope: "aggregate-rule-scope"`, and grouped `findings`. It is not the ordinary JSON report. Only version 0.2 snapshots are accepted. Unknown fields/rules, duplicate keys/groups, incompatible versions, wrong labels, invalid counts and oversized data fail closed. Limits are 1 MiB, 10,000 groups and 100,000 total observations. Existing JSON/text reports retain their documented hostname/path visibility; the new snapshots and SARIF omit it.
+
+### SARIF 2.1.0
+
+```sh
+python3 -m vallum_http --headers examples/needs-review.headers \
+  --origin https://demo.invalid/ --format json --fail-on none > vallum-report.json
+python3 -m vallum_http --headers examples/needs-review.headers \
+  --origin https://demo.invalid/ --format sarif \
+  --sarif-artifact vallum-report.json --fail-on none > vallum.sarif
+```
+
+Review the ordinary report before publishing it: it can contain hostnames and paths. SARIF itself contains grouped findings, rule help, severity levels and execution status, with no raw response or target identifiers. Its default artifact is the public name `vallum-report.json`; line 1 is a summary anchor, not a claim to locate a source-code defect. `--sarif-artifact` accepts only an explicitly public repository-relative path. Generate that reviewed report in the checkout before code-scanning upload. The synthetic `%SRCROOT%` URI is `file:///source/`; consumers requiring an absolute checkout URI should map it to their checkout. Upload permissions/service availability remain the user's responsibility. Full schema validation is tested; live service ingestion has not been tested.
+
+Fingerprints derive from public rule/scope/severity only and inherit aggregate identity limits. No numeric vulnerability score is assigned. An audit or baseline error emits valid SARIF with unsuccessful execution, a generic diagnostic and exit `2`.
+
+Format references: [SARIF 2.1.0](https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/sarif-v2.1.0-os.html) and [code-scanning SARIF support](https://docs.github.com/en/code-security/reference/code-scanning/sarif-files/sarif-support).
 
 ## Boundaries
 
